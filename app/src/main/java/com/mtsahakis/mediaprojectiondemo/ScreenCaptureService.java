@@ -15,6 +15,8 @@ import android.media.Image;
 import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.os.Build;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -178,21 +180,8 @@ public class ScreenCaptureService extends Service {
         super.onCreate();
 
         // create store dir
-        File externalFilesDir = getExternalFilesDir(null);
-        if (externalFilesDir != null) {
-            mStoreDir = externalFilesDir.getAbsolutePath() + "/screenshots/";
-            File storeDirectory = new File(mStoreDir);
-            if (!storeDirectory.exists()) {
-                boolean success = storeDirectory.mkdirs();
-                if (!success) {
-                    Log.e(TAG, "failed to create file storage directory.");
-                    stopSelf();
-                }
-            }
-        } else {
-            Log.e(TAG, "failed to create file storage directory, getExternalFilesDir is null.");
-            stopSelf();
-        }
+        mStoreDir = commonDocumentDirPath("screenrecorder").getPath();
+
 
         // start capture handling thread
         new Thread() {
@@ -275,5 +264,23 @@ public class ScreenCaptureService extends Service {
         mVirtualDisplay = mMediaProjection.createVirtualDisplay(SCREENCAP_NAME, mWidth, mHeight,
                 mDensity, getVirtualDisplayFlags(), mImageReader.getSurface(), null, mHandler);
         mImageReader.setOnImageAvailableListener(new ImageAvailableListener(), mHandler);
+    }
+    public static File commonDocumentDirPath(String FolderName) {
+        File dir = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/" + FolderName);
+        } else {
+            dir = new File(Environment.getExternalStorageDirectory() + "/" + FolderName);
+        }
+
+        // Make sure the path directory exists.
+        if (!dir.exists()) {
+            // Make it, if it doesn't exit
+            boolean success = dir.mkdirs();
+            if (!success) {
+                dir = null;
+            }
+        }
+        return dir;
     }
 }
